@@ -1,6 +1,9 @@
 package org.codejargon.feather;
 
-import javax.inject.*;
+import javax.inject.Inject;
+import javax.inject.Provider;
+import javax.inject.Qualifier;
+import javax.inject.Singleton;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
@@ -10,6 +13,7 @@ public class Feather {
     private final Map<Key, Provider<?>> providers = new ConcurrentHashMap<>();
     private final Map<Key, Object> singletons = new ConcurrentHashMap<>();
     private final Map<Class, Object[][]> injectFields = new ConcurrentHashMap<>(0);
+    private boolean autoInjectFields = false;
 
     /**
      * Constructs Feather with configuration modules
@@ -23,6 +27,18 @@ public class Feather {
      */
     public static Feather with(Iterable<?> modules) {
         return new Feather(modules);
+    }
+
+    public static Feather withAutoInjectFields(Object... modules) {
+        Feather feather = new Feather(Arrays.asList(modules));
+        feather.autoInjectFields = true;
+        return feather;
+    }
+
+    public static Feather withAutoInjectFields(Iterable<?> modules) {
+        Feather feather = new Feather(modules);
+        feather.autoInjectFields = true;
+        return feather;
     }
 
     private Feather(Iterable<?> modules) {
@@ -78,7 +94,7 @@ public class Feather {
         if (!injectFields.containsKey(target.getClass())) {
             injectFields.put(target.getClass(), injectFields(target.getClass()));
         }
-        for (Object[] f: injectFields.get(target.getClass())) {
+        for (Object[] f : injectFields.get(target.getClass())) {
             Field field = (Field) f[0];
             Key key = (Key) f[2];
             try {
@@ -98,7 +114,11 @@ public class Feather {
                         @Override
                         public Object get() {
                             try {
-                                return constructor.newInstance(params(paramProviders));
+                                Object obj = constructor.newInstance(params(paramProviders));
+                                if (autoInjectFields) {
+                                    injectFields(obj);
+                                }
+                                return obj;
                             } catch (Exception e) {
                                 throw new FeatherException(String.format("Can't instantiate %s", key.toString()), e);
                             }
@@ -123,15 +143,15 @@ public class Feather {
                 Collections.singleton(key)
         );
         providers.put(key, singletonProvider(key, singleton, new Provider() {
-                            @Override
-                            public Object get() {
-                                try {
-                                    return m.invoke(module, params(paramProviders));
-                                } catch (Exception e) {
-                                    throw new FeatherException(String.format("Can't instantiate %s with provider", key.toString()), e);
-                                }
-                            }
+                    @Override
+                    public Object get() {
+                        try {
+                            return m.invoke(module, params(paramProviders));
+                        } catch (Exception e) {
+                            throw new FeatherException(String.format("Can't instantiate %s with provider", key.toString()), e);
                         }
+                    }
+                }
                 )
         );
     }
