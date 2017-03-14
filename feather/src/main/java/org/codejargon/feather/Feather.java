@@ -69,7 +69,7 @@ public class Feather {
                 Set<Key> keys = binding.getKeys();
 
                 for (Key key : keys) {
-                    providerBinding(key);
+                    provider(key);
                 }
 
             }
@@ -125,35 +125,11 @@ public class Feather {
     @SuppressWarnings("unchecked")
     private <T> Provider<T> provider(final Key<T> key, Set<Key> chain) {
         if (!providers.containsKey(key)) {
-            final Constructor constructor = constructor(key);
-            final Provider<?>[] paramProviders = paramProviders(key, constructor.getParameterTypes(), constructor.getGenericParameterTypes(), constructor.getParameterAnnotations(), chain);
-            providers.put(key, singletonProvider(key, key.type.getAnnotation(Singleton.class), new Provider() {
-                        @Override
-                        public Object get() {
-                            try {
-                                Object instance = constructor.newInstance(params(paramProviders));
-                                if (autoInjectFields) {
-                                    injectFields(instance);
-                                }
-                                return instance;
-                            } catch (Exception e) {
-                                throw new FeatherException(String.format("Can't instantiate %s", key.toString()), e);
-                            }
-                        }
-                    })
-            );
-        }
-        return (Provider<T>) providers.get(key);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> Provider<T> providerBinding(final Key<T> key) {
-        if (!providers.containsKey(key)) {
             Class<T> toType = key.getToType();
             toType = toType == null ? key.type : toType;
             final Key<T> toKey = Key.of(toType, key.qualifier);
             final Constructor constructor = constructor(toKey);
-            final Provider<?>[] paramProviders = paramProviders(toKey, constructor.getParameterTypes(), constructor.getGenericParameterTypes(), constructor.getParameterAnnotations(), null);
+            final Provider<?>[] paramProviders = paramProviders(toKey, constructor.getParameterTypes(), constructor.getGenericParameterTypes(), constructor.getParameterAnnotations(), chain);
             providers.put(key, singletonProvider(toKey, toKey.type.getAnnotation(Singleton.class), new Provider() {
                         @Override
                         public Object get() {

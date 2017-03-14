@@ -14,19 +14,19 @@ public class Binding {
     private Set<Key> keys = new HashSet<>();
 
 
-    public void bind(Class from, Class to) {
+    public <T> void bind(Class<T> from, Class<? extends T> to) {
         Key key = Key.of(from);
         key.setToType(to);
         keys.add(key);
     }
 
-    public void bind(Class from, Class to, Class<? extends Annotation> qualifier) {
+    public <T> void bind(Class<T> from, Class<? extends T> to, Class<? extends Annotation> qualifier) {
         Key key = Key.of(from, qualifier);
         key.setToType(to);
         keys.add(key);
     }
 
-    public void bind(Class from, Class to, String name) {
+    public <T> void bind(Class<T> from, Class<? extends T> to, String name) {
         Key key = Key.of(from, name);
         key.setToType(to);
         keys.add(key);
