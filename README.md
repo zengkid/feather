@@ -8,30 +8,29 @@ The fork add below features:
 
 1. auto inject the fields
 
-'''
 
-    feather = Feather.with( /* modules if needed*/ );// if use this, then the as fast as original's
-'''
+```java
+    feather = Feather.with( /* modules if needed*/ );// if use this, then the speed as fast as original's
+```
+
 change to
 
-'''
-
+```java
     feather = Feather.withAutoInjectFields( /* modules if needed*/ ); // will lost some performance.
-'''
+```
 
 2. add like guice style provider
 
 for example:
 
-'''
-
+```java
     public interface Service {
         public void say();
     }
-'''
-two implements
-'''
+```
 
+two implements
+```java
     public class ServiceImpl1 implements Service {
         public void say() {
             System.out.println("say 1.");
@@ -44,12 +43,11 @@ two implements
         }
     }
 
-'''
+```
 
 create a module to binding the implements
 
-'''
-
+```java
     Module myModule = new Module() {
         @Override
         public void configure(Binding binding) {
@@ -57,11 +55,10 @@ create a module to binding the implements
             binding.bind(UserService.class, UserServiceImpl2.class, "userService2");
         }
     }
-'''
+```
 
 usage:
-'''
-
+```java
     public class Controller {
 
         @Inject
@@ -90,12 +87,12 @@ usage:
             controller.say();
         }
     }
-'''
+```
 
 The output:
-'''
+```
 
     say 1.
     say 2.
-'''
+```
 
