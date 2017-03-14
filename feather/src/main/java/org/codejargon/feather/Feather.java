@@ -13,35 +13,40 @@ public class Feather {
     private final Map<Key, Provider<?>> providers = new ConcurrentHashMap<>();
     private final Map<Key, Object> singletons = new ConcurrentHashMap<>();
     private final Map<Class, Object[][]> injectFields = new ConcurrentHashMap<>(0);
-    private boolean autoInjectFields = false;
+    private final boolean autoInjectFields;
 
     /**
      * Constructs Feather with configuration modules
      */
     public static Feather with(Object... modules) {
-        return new Feather(Arrays.asList(modules));
+        return new Feather(Arrays.asList(modules), false);
     }
 
     /**
      * Constructs Feather with configuration modules
      */
     public static Feather with(Iterable<?> modules) {
-        return new Feather(modules);
+        return new Feather(modules, false);
     }
 
+
+    /**
+     * Constructs Feather with configuration modules
+     */
     public static Feather withAutoInjectFields(Object... modules) {
-        Feather feather = new Feather(Arrays.asList(modules));
-        feather.autoInjectFields = true;
-        return feather;
+        return new Feather(Arrays.asList(modules), true);
     }
 
+    /**
+     * Constructs Feather with configuration modules
+     */
     public static Feather withAutoInjectFields(Iterable<?> modules) {
-        Feather feather = new Feather(modules);
-        feather.autoInjectFields = true;
-        return feather;
+        return new Feather(modules, true);
     }
 
-    private Feather(Iterable<?> modules) {
+
+    private Feather(Iterable<?> modules, boolean autoInjectFields) {
+        this.autoInjectFields = autoInjectFields;
         providers.put(Key.of(Feather.class), new Provider() {
                     @Override
                     public Object get() {
@@ -55,6 +60,18 @@ public class Feather {
             }
             for (Method providerMethod : providers(module.getClass())) {
                 providerMethod(module, providerMethod);
+            }
+
+            if (Module.class.isAssignableFrom(module.getClass())) {
+                Module m = (Module) module;
+                Binding binding = new Binding();
+                m.configure(binding);
+                Set<Key> keys = binding.getKeys();
+
+                for (Key key : keys) {
+                    providerBinding(key);
+                }
+
             }
         }
     }
@@ -88,7 +105,7 @@ public class Feather {
     }
 
     /**
-     * Injects fields to the target object
+     * Injects fields to the targetType object
      */
     public void injectFields(Object target) {
         if (!injectFields.containsKey(target.getClass())) {
@@ -114,13 +131,40 @@ public class Feather {
                         @Override
                         public Object get() {
                             try {
-                                Object obj = constructor.newInstance(params(paramProviders));
+                                Object instance = constructor.newInstance(params(paramProviders));
                                 if (autoInjectFields) {
-                                    injectFields(obj);
+                                    injectFields(instance);
                                 }
-                                return obj;
+                                return instance;
                             } catch (Exception e) {
                                 throw new FeatherException(String.format("Can't instantiate %s", key.toString()), e);
+                            }
+                        }
+                    })
+            );
+        }
+        return (Provider<T>) providers.get(key);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Provider<T> providerBinding(final Key<T> key) {
+        if (!providers.containsKey(key)) {
+            Class<T> toType = key.getToType();
+            toType = toType == null ? key.type : toType;
+            final Key<T> toKey = Key.of(toType, key.qualifier);
+            final Constructor constructor = constructor(toKey);
+            final Provider<?>[] paramProviders = paramProviders(toKey, constructor.getParameterTypes(), constructor.getGenericParameterTypes(), constructor.getParameterAnnotations(), null);
+            providers.put(key, singletonProvider(toKey, toKey.type.getAnnotation(Singleton.class), new Provider() {
+                        @Override
+                        public Object get() {
+                            try {
+                                Object instance = constructor.newInstance(params(paramProviders));
+                                if (autoInjectFields) {
+                                    injectFields(instance);
+                                }
+                                return instance;
+                            } catch (Exception e) {
+                                throw new FeatherException(String.format("Can't instantiate %s", toKey.toString()), e);
                             }
                         }
                     })

@@ -5,6 +5,7 @@ import java.lang.annotation.Annotation;
 
 public class Key<T> {
     final Class<T> type;
+    Class<T> toType;
     final Class<? extends Annotation> qualifier;
     final String name;
 
@@ -43,6 +44,14 @@ public class Key<T> {
                     Key.of(type, ((Named) qualifier).value()) :
                     Key.of(type, qualifier.annotationType());
         }
+    }
+
+    public Class<T> getToType() {
+        return toType;
+    }
+
+    public void setToType(Class<T> toType) {
+        this.toType = toType;
     }
 
     @Override
