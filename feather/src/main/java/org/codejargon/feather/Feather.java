@@ -69,7 +69,7 @@ public class Feather {
                 Set<Key> keys = binding.getKeys();
 
                 for (Key key : keys) {
-                    provider(key);
+                    provider(key, null, true);
                 }
 
             }
@@ -80,28 +80,28 @@ public class Feather {
      * @return an instance of type
      */
     public <T> T instance(Class<T> type) {
-        return provider(Key.of(type), null).get();
+        return provider(Key.of(type), null, false).get();
     }
 
     /**
      * @return instance specified by key (type and qualifier)
      */
     public <T> T instance(Key<T> key) {
-        return provider(key, null).get();
+        return provider(key, null, false).get();
     }
 
     /**
      * @return provider of type
      */
     public <T> Provider<T> provider(Class<T> type) {
-        return provider(Key.of(type), null);
+        return provider(Key.of(type), null, false);
     }
 
     /**
      * @return provider of key (type, qualifier)
      */
     public <T> Provider<T> provider(Key<T> key) {
-        return provider(key, null);
+        return provider(key, null, false);
     }
 
     /**
@@ -123,8 +123,8 @@ public class Feather {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> Provider<T> provider(final Key<T> key, Set<Key> chain) {
-        if (!providers.containsKey(key)) {
+    private <T> Provider<T> provider(final Key<T> key, Set<Key> chain, boolean override) {
+        if (!providers.containsKey(key) || override) {
             Class<T> toType = key.getToType();
             toType = toType == null ? key.type : toType;
             final Key<T> toKey = Key.of(toType, key.qualifier);
@@ -151,9 +151,9 @@ public class Feather {
 
     private void providerMethod(final Object module, final Method m) {
         final Key key = Key.of(m.getReturnType(), qualifier(m.getAnnotations()));
-        if (providers.containsKey(key)) {
-            throw new FeatherException(String.format("%s has multiple providers, module %s", key.toString(), module.getClass()));
-        }
+//        if (providers.containsKey(key)) {
+//            throw new FeatherException(String.format("%s has multiple providers, module %s", key.toString(), module.getClass()));
+//        }
         Singleton singleton = m.getAnnotation(Singleton.class) != null ? m.getAnnotation(Singleton.class) : m.getReturnType().getAnnotation(Singleton.class);
         final Provider<?>[] paramProviders = paramProviders(
                 key,
@@ -216,7 +216,7 @@ public class Feather {
                 providers[i] = new Provider() {
                     @Override
                     public Object get() {
-                        return provider(newKey, newChain).get();
+                        return provider(newKey, newChain, false).get();
                     }
                 };
             } else {
@@ -224,7 +224,7 @@ public class Feather {
                 providers[i] = new Provider() {
                     @Override
                     public Object get() {
-                        return provider(newKey, null);
+                        return provider(newKey, null, false);
                     }
                 };
             }
